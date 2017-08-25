@@ -1,7 +1,7 @@
 (Alpha) Speedrunning Map Path Tool
 =
 
-**Warning: This is a super early version of the tool.  It's going to break, it's going to have bugs.**
+**Warning: This is a super early version of the tool.  It's going to break, it's going to have bugs.  A huge number of things flat out don't work yet or work in a terrible way.**
 
 **Note: The current use case is targeted at the Hollow Knight Community, but there is no reason this can't eventually be used for any game that has a 2D map.**
 
