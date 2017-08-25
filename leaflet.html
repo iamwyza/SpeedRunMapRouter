@@ -20,6 +20,7 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/rivets/0.9.6/rivets.bundled.min.js"></script>
     <script>
+        /// <reference path="../../../../../node_modules/@types/leaflet/index.d.ts" />
         var layer;
         function init() {
             var mapMinZoom = 0;
@@ -60,24 +61,41 @@
                 ]
             };
 
-            var points = [];
-            /*
-                        function onMapClick(e) {
-                            points.push(e.latlng);
-                        }
-            */
-            map.on('keypress', onMapKeypress);
+            var currentRoute;
+            var currentLine;
 
+            var points = [];
+            
             function onMapKeypress(e) {
                 console.log(e);
-                if (e.originalEvent.keyCode == 13) {
-                    new L.polyline(points, {
-                        color: 'red',
-                        weight: 3,
-                        opacity: 1,
-                        smoothfactor: 1
-                    }).addTo(map);
+                console.log(e.originalEvent.keyCode);
+                switch(e.originalEvent.keyCode) {
+                    case 13: //enter
+                        currentRoute.paths.push(
+                            {
+                                name: currentRoute.paths.length,
+                                points: points,
+                                notes: "",
+                                segment: 0
+                            }
+                            );
+                        points = [];
+                    break;
+                    //case 8: //backspace
+                    case 99: //c
+                    console.log(points);
+                        points.pop();
+                        console.log(points);
+                        currentLine.setLatLngs(points);
+                        break;
+                    //case 27: //esc
+                    case 120://x
+                        points = [];
+                        currentLine.removeFrom(map);
+                        currentLine = undefined;
+                        break;
                 }
+                
             }
 
             /*
@@ -117,28 +135,39 @@
             };
 
             var routeController = {
-                enabled : false,
+                enabled: false,
                 headerClick: function (event, rivetData) {
                     console.log(event);
                     console.log(rivetData);
                     rivetData.route.enabled = !rivetData.route.enabled;
-                    map.on('click', addPathSegment, rivetData.route);
+                    currentRoute = rivetData.route;
+                    map.on('click', addPathSegment);
+                    map.on('keypress', onMapKeypress);
                 },
             };
 
-            function addPathSegment(e, route) {
-                
+
+            function addPathSegment(e) {
+                points.push(e.latlng);
+                if (currentLine == undefined) {
+                    if (points.length > 1)
+                        currentLine = new L.polyline(points, {
+                            color: 'red',
+                            weight: 3,
+                            opacity: 1,
+                            smoothfactor: 1
+                        }).addTo(map);
+                } else {
+                    currentLine.addLatLng(e.latlng);
+                }
             }
 
 
             var view = rivets.bind($('#routes'), { data: data, controller: routeController });
 
-            
-        }
-        function test(el) {
 
-            console.log(el);
         }
+
     </script>
     <style>
         html,
@@ -173,8 +202,8 @@
             border-radius: 4px;
             padding: 5px;
             margin: 5px 0 5px -40px;
-            cursor:pointer;
-            width:100%;
+            cursor: pointer;
+            width: 100%;
             display: inline-block
         }
 
@@ -207,7 +236,7 @@
                 </h1>
                 <div id="routes" rv-routes="data">
                     <ul>
-                        <li rv-each-route="data.routes" >
+                        <li rv-each-route="data.routes">
                             <span class="header" rv-on-click="controller.headerClick">{ route.name } <i class="fa fa-pencil" style="float:right; color:#888888"></i></span>
                             <div rv-show="route.enabled">
                                 <ul rv-each-path="route.paths">
@@ -220,7 +249,7 @@
                     </ul>
                 </div>
             </div>
-<!--
+            <!--
             <div class="sidebar-pane" id="routeinfo">
                 <h1 class="sidebar-header">Route Info<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
             </div>
