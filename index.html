@@ -32,11 +32,13 @@
                     "#00ffff"
                 ],
                 Controls : { //Currently using "keypress" vs "keydown" due to lack of "keydown" support in leaflet
-                    EndPath: 120, //x
+                    CancelPath: 120, //x
                     RemoveLastPathPart: 99, //c
                     SavePathPart: 13, //enter
                     NewSegment: 115 //s
-                }
+                },
+                DefaultNewSegmentFormat: "Segment: {0}",
+                DefaultNewPathFormat: "Step: {0}"
             };
 
 
@@ -75,13 +77,20 @@
                 routes: [
                     {
                         name: "Route: 100% NMG",
-                        paths: [
+                        segments: [
+                            {
+                                name: "Segment: 1",
+                                notes: "",
+                                paths: [
+
+                                ]
+                            }
 
                         ]
                     },
                     {
                         name: "Route: Any% NMG",
-                        paths: []
+                        segments: []
                     }
                 ]
             };
@@ -92,30 +101,42 @@
                 //console.log(e);
                 
                 switch(e.originalEvent.keyCode) {
-                    case 13: //enter
-                        currentRoute.paths.push(
+                    case config.Controls.SavePathPart: //enter
+                        currentRoute.segments[currentSegment].paths.push(
                             {
-                                name: currentRoute.paths.length,
+                                name: config.DefaultNewPathFormat.replace("{0}", currentRoute.segments[currentSegment].paths.length + 1),
                                 points: points,
-                                notes: "",
-                                segment: currentSegment
+                                notes: ""
                             }
-                            );
-                            currentLine = undefined;
+                        );
+                        currentLine = undefined;
                         points = [];
                     break;
-                    //case 8: //backspace
-                    case 99: //c
-                    console.log(points);
+
+
+                    case config.Controls.RemoveLastPathPart:
+                        console.log(points);
                         points.pop();
                         console.log(points);
                         currentLine.setLatLngs(points);
                         break;
-                    //case 27: //esc
-                    case 120://x
+                    case config.ControCancelPath:
                         points = [];
                         currentLine.removeFrom(map);
                         currentLine = undefined;
+                        break;
+                    case config.Controls.NewSegment:
+                        currentLine = undefined;
+                        currentColorIndex = -1;
+                        currentSegment++;
+                        points = [];
+                        currentRoute.segments.push({
+                            name: config.DefaultNewSegmentFormat.replace("{0}", currentSegment+1),
+                            notes: "",
+                            paths: [
+
+                            ]
+                        })
                         break;
                 }
                 
@@ -263,11 +284,17 @@
                         <li rv-each-route="data.routes">
                             <span class="header" rv-on-click="controller.headerClick">{ route.name } <i class="fa fa-pencil" style="float:right; color:#888888"></i></span>
                             <div rv-show="route.enabled">
-                                <ul rv-each-path="route.paths">
+                                <ul rv-each-segment="route.segments">
                                     <li>
-                                        { path.name }
+                                        { segment.name }
+                                        <ul rv-each-path="segment.paths">
+                                            <li>
+                                                    { path.name }
+                                            </li>
+                                        </ul>
                                     </li>
                                 </ul>
+                                
                             </div>
                         </li>
                     </ul>
