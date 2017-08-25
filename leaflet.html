@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Tiles</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+
+    <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet">
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.2.0/dist/leaflet.css" integrity="sha512-M2wvCLH6DSRazYeZRIm1JnYyh22purTM+FDB5CsyxtQJYeKq83arPe5wgbNmcFXGqiSH2XR8dT/fJISVA1r/zQ=="
+        crossorigin="" />
+
+    <script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="
+        crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/leaflet@1.2.0/dist/leaflet.js" integrity="sha512-lInM/apFSqyy1o6s89K4iQUKg6ppXEgsVxT35HbzUupEVRh2Eu9Wdl4tHj7dZO0s1uvplcYGmt3498TtHq+log=="
+        crossorigin=""></script>
+    <link rel="stylesheet" href="leaflet-sidebar.css" />
+    <script src="leaflet-sidebar.js"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/rivets/0.9.6/rivets.bundled.min.js"></script>
+    <script>
+        var layer;
+        function init() {
+            var mapMinZoom = 0;
+            var mapMaxZoom = 5;
+            var map = L.map('map', {
+                maxZoom: mapMaxZoom,
+                minZoom: mapMinZoom,
+                crs: L.CRS.Simple
+            }).setView([0, 0], mapMaxZoom);
+
+            var mapBounds = new L.LatLngBounds(
+                map.unproject([0, 3072], mapMaxZoom),
+                map.unproject([4608, 0], mapMaxZoom));
+
+            map.fitBounds(mapBounds);
+            layer = L.tileLayer('{z}/{x}/{y}.png', {
+                minZoom: mapMinZoom, maxZoom: mapMaxZoom,
+                bounds: mapBounds,
+                attribution: 'Rendered with <a href="https://www.maptiler.com/">MapTiler</a>',
+                noWrap: true,
+                tms: false
+            }).addTo(map);
+
+            //map.on('click', onMapClick);
+
+            var data = {
+                routes: [
+                    {
+                        name: "Route: 100% NMG",
+                        paths: [
+
+                        ]
+                    },
+                    {
+                        name: "Route: Any% NMG",
+                        paths: []
+                    }
+                ]
+            };
+
+            var points = [];
+            /*
+                        function onMapClick(e) {
+                            points.push(e.latlng);
+                        }
+            */
+            map.on('keypress', onMapKeypress);
+
+            function onMapKeypress(e) {
+                console.log(e);
+                if (e.originalEvent.keyCode == 13) {
+                    new L.polyline(points, {
+                        color: 'red',
+                        weight: 3,
+                        opacity: 1,
+                        smoothfactor: 1
+                    }).addTo(map);
+                }
+            }
+
+            /*
+            var firstpolyline = new L.polyline([map.unproject([0,0], mapMaxZoom), map.unproject([110,110], mapMaxZoom)], { 
+                color: 'red',
+                weight: 3,
+                opacity: 1,
+                smoothfactor:1
+            } );
+        	
+            firstpolyline.addTo(map);
+            */
+            var sidebar = L.control.sidebar('sidebar').addTo(map);
+
+
+
+            rivets.binders.routes = {
+                bind: function (el) {
+                    var opts = {};
+                    opts.onSet = this.publish;
+                    this.data = data;
+                },
+
+                unbind: function (el) {
+                    this.data = undefined;
+                },
+
+                routine: function (el, value) {
+                    if (value) {
+                        this.data = value;
+                    }
+                },
+
+                getValue: function (el) {
+                    return this.data;
+                }
+            };
+
+            var routeController = {
+                enabled : false,
+                headerClick: function (event, rivetData) {
+                    console.log(event);
+                    console.log(rivetData);
+                    rivetData.route.enabled = !rivetData.route.enabled;
+                    map.on('click', addPathSegment, rivetData.route);
+                },
+            };
+
+            function addPathSegment(e, route) {
+                
+            }
+
+
+            var view = rivets.bind($('#routes'), { data: data, controller: routeController });
+
+            
+        }
+        function test(el) {
+
+            console.log(el);
+        }
+    </script>
+    <style>
+        html,
+        body,
+        #map {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            z-index: 1;
+        }
+
+        #slider {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 5;
+        }
+
+        .leaflet-container {
+            background: #000000;
+        }
+
+
+        #routes ul>li span.header {
+            font: normal normal normal 14px/1 FontAwesome;
+            font-size: inherit;
+            text-rendering: auto;
+            -webkit-font-smoothing: antialiased;
+            background-color: #180d56;
+            color: #FFFFFF;
+            border-radius: 4px;
+            padding: 5px;
+            margin: 5px 0 5px -40px;
+            cursor:pointer;
+            width:100%;
+            display: inline-block
+        }
+
+        #routes ul {
+            list-style-type: none;
+        }
+    </style>
+</head>
+
+<body onload="init()">
+    <div id="sidebar" class="sidebar ">
+        <!-- Nav tabs -->
+        <div class="sidebar-tabs">
+            <ul role="tablist">
+                <li class="active"><a href="#home" role="tab"><i class="fa fa-bars"></i></a></li>
+                <li><a href="#routeinfo" role="tab"><i class="fa fa-map"></i></a></li>
+            </ul>
+
+            <ul role="tablist">
+                <li><a href="#settings" role="tab"><i class="fa fa-gear"></i></a></li>
+            </ul>
+        </div>
+
+        <!-- Tab panes -->
+        <div class="sidebar-content">
+            <div class="sidebar-pane active" id="home">
+                <h1 class="sidebar-header">
+                    Routes and Layers
+                    <span class="sidebar-close"><i class="fa fa-caret-left"></i></span>
+                </h1>
+                <div id="routes" rv-routes="data">
+                    <ul>
+                        <li rv-each-route="data.routes" >
+                            <span class="header" rv-on-click="controller.headerClick">{ route.name } <i class="fa fa-pencil" style="float:right; color:#888888"></i></span>
+                            <div rv-show="route.enabled">
+                                <ul rv-each-path="route.paths">
+                                    <li>
+                                        { path.name }
+                                    </li>
+                                </ul>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+<!--
+            <div class="sidebar-pane" id="routeinfo">
+                <h1 class="sidebar-header">Route Info<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
+            </div>
+        -->
+            <div class="sidebar-pane" id="settings">
+                <h1 class="sidebar-header">Settings<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
+            </div>
+        </div>
+    </div>
+
+
+    <div id="map"></div>
+    <!--<input id="slider" type="range" min="0" max="1" step="0.1" value="1" oninput="layer.setOpacity(this.value)">-->
+
+
+
+</body>
+
+</html>
