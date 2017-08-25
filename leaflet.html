@@ -23,6 +23,31 @@
         /// <reference path="../../../../../node_modules/@types/leaflet/index.d.ts" />
         var layer;
         function init() {
+            var config = { //Much of this should move into a settings area eventually.
+                PathColorPriority : [ //Pulled from the 100% NMG guide, arbitrary?
+                    "#ffff00",
+                    "#01fc01",
+                    "#ff8000",
+                    "#008000",
+                    "#00ffff"
+                ],
+                Controls : { //Currently using "keypress" vs "keydown" due to lack of "keydown" support in leaflet
+                    EndPath: 120, //x
+                    RemoveLastPathPart: 99, //c
+                    SavePathPart: 13, //enter
+                    NewSegment: 115 //s
+                }
+            };
+
+
+            // Initialize Variables
+            var currentColorIndex = -1;
+            var currentRoute;
+            var currentLine;
+            var currentSegment;
+            var points = [];
+
+            //Initialize Map
             var mapMinZoom = 0;
             var mapMaxZoom = 5;
             var map = L.map('map', {
@@ -61,14 +86,11 @@
                 ]
             };
 
-            var currentRoute;
-            var currentLine;
 
-            var points = [];
             
             function onMapKeypress(e) {
-                console.log(e);
-                console.log(e.originalEvent.keyCode);
+                //console.log(e);
+                
                 switch(e.originalEvent.keyCode) {
                     case 13: //enter
                         currentRoute.paths.push(
@@ -76,9 +98,10 @@
                                 name: currentRoute.paths.length,
                                 points: points,
                                 notes: "",
-                                segment: 0
+                                segment: currentSegment
                             }
                             );
+                            currentLine = undefined;
                         points = [];
                     break;
                     //case 8: //backspace
@@ -98,19 +121,7 @@
                 
             }
 
-            /*
-            var firstpolyline = new L.polyline([map.unproject([0,0], mapMaxZoom), map.unproject([110,110], mapMaxZoom)], { 
-                color: 'red',
-                weight: 3,
-                opacity: 1,
-                smoothfactor:1
-            } );
-        	
-            firstpolyline.addTo(map);
-            */
             var sidebar = L.control.sidebar('sidebar').addTo(map);
-
-
 
             rivets.binders.routes = {
                 bind: function (el) {
@@ -141,6 +152,7 @@
                     console.log(rivetData);
                     rivetData.route.enabled = !rivetData.route.enabled;
                     currentRoute = rivetData.route;
+                    currentSegment = 0;
                     map.on('click', addPathSegment);
                     map.on('keypress', onMapKeypress);
                 },
@@ -152,7 +164,7 @@
                 if (currentLine == undefined) {
                     if (points.length > 1)
                         currentLine = new L.polyline(points, {
-                            color: 'red',
+                            color: getNextColor(),
                             weight: 3,
                             opacity: 1,
                             smoothfactor: 1
@@ -165,6 +177,18 @@
 
             var view = rivets.bind($('#routes'), { data: data, controller: routeController });
 
+            function getNextColor() {
+                console.log(config.PathColorPriority.length);
+                console.log(currentColorIndex);
+                if (currentColorIndex >= config.PathColorPriority.length-1) {
+                    currentColorIndex = 0;
+                }else{
+                    currentColorIndex++;
+                }
+
+                return config.PathColorPriority[currentColorIndex];
+
+            }
 
         }
 
