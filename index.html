@@ -19,61 +19,32 @@
     <script src="leaflet-sidebar.js"></script>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/rivets/0.9.6/rivets.bundled.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-polylinedecorator/1.1.0/leaflet.polylineDecorator.min.js"></script>
     <script>
         /// <reference path="../../../../../node_modules/@types/leaflet/index.d.ts" />
         var layer;
         function init() {
-            var config = { //Much of this should move into a settings area eventually.
-                PathColorPriority : [ //Pulled from the 100% NMG guide, arbitrary?
+
+            var defaultConfig = { //Much of this should move into a settings area eventually.
+                PathColorPriority: [ //Pulled from the 100% NMG guide, arbitrary?
                     "#ffff00",
                     "#01fc01",
                     "#ff8000",
                     "#008000",
                     "#00ffff"
                 ],
-                Controls : { //Currently using "keypress" vs "keydown" due to lack of "keydown" support in leaflet
+                Controls: { //Currently using "keypress" vs "keydown" due to lack of "keydown" support in leaflet
                     CancelPath: 120, //x
                     RemoveLastPathPart: 99, //c
                     SavePathPart: 13, //enter
-                    NewSegment: 115 //s
+                    NewSegment: 115, //s
+                    DraggingToggle: 100 //d
                 },
                 DefaultNewSegmentFormat: "Segment: {0}",
                 DefaultNewPathFormat: "Step: {0}"
             };
 
-
-            // Initialize Variables
-            var currentColorIndex = -1;
-            var currentRoute;
-            var currentLine;
-            var currentSegment;
-            var points = [];
-
-            //Initialize Map
-            var mapMinZoom = 0;
-            var mapMaxZoom = 5;
-            var map = L.map('map', {
-                maxZoom: mapMaxZoom,
-                minZoom: mapMinZoom,
-                crs: L.CRS.Simple
-            }).setView([0, 0], mapMaxZoom);
-
-            var mapBounds = new L.LatLngBounds(
-                map.unproject([0, 3072], mapMaxZoom),
-                map.unproject([4608, 0], mapMaxZoom));
-
-            map.fitBounds(mapBounds);
-            layer = L.tileLayer('{z}/{x}/{y}.png', {
-                minZoom: mapMinZoom, maxZoom: mapMaxZoom,
-                bounds: mapBounds,
-                attribution: 'Rendered with <a href="https://www.maptiler.com/">MapTiler</a>',
-                noWrap: true,
-                tms: false
-            }).addTo(map);
-
-            //map.on('click', onMapClick);
-
-            var data = {
+            var defaultData = {
                 routes: [
                     {
                         name: "Route: 100% NMG",
@@ -95,115 +66,228 @@
                 ]
             };
 
+            // Initialize Variables
+            var currentColorIndex = -1;
+            var currentRoute;
+            var currentLine;
+            var currentSegment = 0;
+            var points = [];
+            var isEditingRoute = false;
+            var data;
+            var config;
 
-            
+            load();
+
+            //Initialize Map
+            var mapMinZoom = 0;
+            var mapMaxZoom = 5;
+            var map = L.map('map', {
+                maxZoom: mapMaxZoom,
+                minZoom: mapMinZoom,
+                crs: L.CRS.Simple,
+                boxZoom: false
+            }).setView([0, 0], mapMaxZoom);
+
+            var mapBounds = new L.LatLngBounds(
+                map.unproject([0, 3072], mapMaxZoom),
+                map.unproject([4608, 0], mapMaxZoom));
+
+            map.fitBounds(mapBounds);
+            layer = L.tileLayer('{z}/{x}/{y}.png', {
+                minZoom: mapMinZoom, maxZoom: mapMaxZoom,
+                bounds: mapBounds,
+                attribution: 'Rendered with <a href="https://www.maptiler.com/">MapTiler</a>',
+                noWrap: true,
+                tms: false,
+                className: "Main"
+            }).addTo(map);
+
+            var pathLayer = L.layerGroup().addTo(map);
+
+            //map.on('click', onMapClick);
+
             function onMapKeypress(e) {
                 //console.log(e);
-                
-                switch(e.originalEvent.keyCode) {
-                    case config.Controls.SavePathPart: //enter
-                        currentRoute.segments[currentSegment].paths.push(
-                            {
-                                name: config.DefaultNewPathFormat.replace("{0}", currentRoute.segments[currentSegment].paths.length + 1),
-                                points: points,
-                                notes: ""
+                if (isEditingRoute) {
+                    switch (e.originalEvent.keyCode) {
+                        case config.Controls.SavePathPart:
+
+                            addArrow(currentLine);
+
+                            if (currentRoute.segments == undefined || currentRoute.segments.length == 0) {
+                                currentSegment = -1;
+                                addSegment();
                             }
-                        );
-                        currentLine = undefined;
-                        points = [];
-                    break;
 
+                            if (currentRoute.segments[currentSegment].paths == undefined)
+                                currentRoute.segments[currentSegment].paths = [];
 
-                    case config.Controls.RemoveLastPathPart:
-                        console.log(points);
-                        points.pop();
-                        console.log(points);
-                        currentLine.setLatLngs(points);
-                        break;
-                    case config.ControCancelPath:
-                        points = [];
-                        currentLine.removeFrom(map);
-                        currentLine = undefined;
-                        break;
-                    case config.Controls.NewSegment:
-                        currentLine = undefined;
-                        currentColorIndex = -1;
-                        currentSegment++;
-                        points = [];
-                        currentRoute.segments.push({
-                            name: config.DefaultNewSegmentFormat.replace("{0}", currentSegment+1),
-                            notes: "",
-                            paths: [
-
-                            ]
-                        })
-                        break;
+                            currentRoute.segments[currentSegment].paths.push(
+                                {
+                                    name: config.DefaultNewPathFormat.replace("{0}", currentRoute.segments[currentSegment].paths.length + 1),
+                                    points: points,
+                                    notes: ""
+                                }
+                            );
+                            currentLine = undefined;
+                            points = [];
+                            break;
+                        case config.Controls.RemoveLastPathPart:
+                            //console.log(points);
+                            points.pop();
+                            console.log(points);
+                            currentLine.setLatLngs(points);
+                            break;
+                        case config.Controls.CancelPath:
+                            points = [];
+                            currentLine.removeFrom(map);
+                            currentColorIndex--;
+                            currentLine = undefined;
+                            break;
+                        case config.Controls.NewSegment:
+                            addSegment();
+                            break;
+                        case config.Controls.DraggingToggle:
+                            if (map.dragging._enabled)
+                                map.dragging.disable();
+                            else
+                                map.dragging.enable();
+                            break;
+                    }
                 }
-                
+            }
+
+            function addSegment() {
+
+                currentLine = undefined;
+                currentColorIndex = -1;
+                currentSegment++;
+                points = [];
+                if (currentRoute.segments == undefined)
+                    currentRoute.segments = [];
+
+                if (currentRoute.segments == 0)
+                    currentColorIndex = 0;
+
+                currentRoute.segments.push({
+                    name: config.DefaultNewSegmentFormat.replace("{0}", currentSegment + 1),
+                    notes: "",
+                    paths: [
+
+                    ]
+                });
             }
 
             var sidebar = L.control.sidebar('sidebar').addTo(map);
 
             rivets.binders.routes = {
+
                 bind: function (el) {
                     var opts = {};
                     opts.onSet = this.publish;
-                    this.data = data;
                 },
 
                 unbind: function (el) {
-                    this.data = undefined;
+
                 },
 
                 routine: function (el, value) {
-                    if (value) {
-                        this.data = value;
-                    }
+
                 },
 
                 getValue: function (el) {
-                    return this.data;
+
                 }
             };
 
             var routeController = {
                 enabled: false,
                 headerClick: function (event, rivetData) {
-                    console.log(event);
+                    //console.log(event);
+                    //console.log(rivetData);
+                    pathLayer.clearLayers();
+                    
+                    rivetData.route.enabled = !rivetData.route.enabled;
                     console.log(rivetData);
+                    if (rivetData.route.enabled) {
+                        currentRoute = rivetData.route;
+                        currentSegment = 0;
+
+                        $.each(rivetData.data.routes, function(i,e){
+                            if (e != rivetData.route && e.enabled)
+                            {
+                                console.log('hi');
+                                e.enabled = false;
+                            }
+                        })
+                        
+                        loadRoute(rivetData.route);
+                    }
+
+                },
+                edit: function (event, rivetData) {
                     rivetData.route.enabled = !rivetData.route.enabled;
                     currentRoute = rivetData.route;
                     currentSegment = 0;
+                    isEditingRoute = true;
+                    map.dragging.disable();
+                    //console.log(map.dragging);
                     map.on('click', addPathSegment);
                     map.on('keypress', onMapKeypress);
-                },
+                }
             };
 
+            function loadRoute(route) {
+                $.each(route.segments, function (i, e) {
+                    currentColorIndex = -1;
+                    loadSegment(e);
+                })
+            }
+
+            function loadSegment(segment) {
+                $.each(segment.paths, function (i, e) {
+                    var line = new L.polyline(e.points, {
+                        color: getNextColor(),
+                        weight: 3,
+                        opacity: 1,
+                        smoothfactor: 1
+                    }).addTo(pathLayer);
+                    addArrow(line);
+                });
+            }
+
+            function addArrow(line) {
+                L.polylineDecorator(line, {
+                    patterns: [
+                        // defines a pattern of 10px-wide dashes, repeated every 20px on the line
+                        { offset: '100%', repeat: 0, symbol: L.Symbol.arrowHead({ pixelSize: 8, polygon: false, pathOptions: { stroke: true, color: config.PathColorPriority[currentColorIndex], } }) }
+                    ]
+                }).addTo(pathLayer);
+            }
 
             function addPathSegment(e) {
                 points.push(e.latlng);
                 if (currentLine == undefined) {
-                    if (points.length > 1)
+                    if (points.length > 1) {
                         currentLine = new L.polyline(points, {
                             color: getNextColor(),
                             weight: 3,
                             opacity: 1,
                             smoothfactor: 1
-                        }).addTo(map);
+                        }).addTo(pathLayer);
+
+                    }
                 } else {
                     currentLine.addLatLng(e.latlng);
                 }
             }
 
-
             var view = rivets.bind($('#routes'), { data: data, controller: routeController });
 
             function getNextColor() {
-                console.log(config.PathColorPriority.length);
-                console.log(currentColorIndex);
-                if (currentColorIndex >= config.PathColorPriority.length-1) {
+                if (currentColorIndex >= config.PathColorPriority.length - 1) {
                     currentColorIndex = 0;
-                }else{
+                } else {
                     currentColorIndex++;
                 }
 
@@ -211,8 +295,32 @@
 
             }
 
-        }
+            //Using local storage for now. If this thing takes off will probably need to switch this to server storage
+            function save() {
+                console.log(data);
 
+                localStorage.setItem("srpData", JSON.stringify(data));
+                localStorage.setItem("srpConfig", JSON.stringify(config));
+            }
+
+            function load() {
+                data = JSON.parse(localStorage.getItem("srpData"));
+                config = JSON.parse(localStorage.getItem("srpConfig"));
+                if (data == undefined) {
+                    console.log("no data found");
+                    data = defaultData;
+                    config = defaultConfig;
+                }
+                $.each(data.routes, function (i, e) {
+                    e.enabled = false;
+                });
+                console.log(data);
+            }
+
+            $("#btnSave").on('click', function () {
+                save();
+            });
+        }
     </script>
     <style>
         html,
@@ -265,9 +373,11 @@
             <ul role="tablist">
                 <li class="active"><a href="#home" role="tab"><i class="fa fa-bars"></i></a></li>
                 <li><a href="#routeinfo" role="tab"><i class="fa fa-map"></i></a></li>
+                <li><a href="#help" role="tab"><i class="fa fa-question-circle"></i></a></li>
             </ul>
 
             <ul role="tablist">
+                <li id="btnSave"><a href="javascript:void(0)"><i class="fa fa-floppy-o"></i></a></li>
                 <li><a href="#settings" role="tab"><i class="fa fa-gear"></i></a></li>
             </ul>
         </div>
@@ -282,19 +392,19 @@
                 <div id="routes" rv-routes="data">
                     <ul>
                         <li rv-each-route="data.routes">
-                            <span class="header" rv-on-click="controller.headerClick">{ route.name } <i class="fa fa-pencil" style="float:right; color:#888888"></i></span>
+                            <span class="header" rv-on-click="controller.headerClick">{ route.name } <i class="fa fa-pencil" style="float:right; color:#888888" rv-on-click="controller.edit"></i></span>
                             <div rv-show="route.enabled">
                                 <ul rv-each-segment="route.segments">
                                     <li>
                                         { segment.name }
                                         <ul rv-each-path="segment.paths">
                                             <li>
-                                                    { path.name }
+                                                { path.name }
                                             </li>
                                         </ul>
                                     </li>
                                 </ul>
-                                
+
                             </div>
                         </li>
                     </ul>
@@ -305,6 +415,13 @@
                 <h1 class="sidebar-header">Route Info<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
             </div>
         -->
+            <div class="sidebar-pane" id="help">
+                <h1 class="sidebar-header">Help<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
+                <h2>Key Bindings</h2>
+                <ul>
+
+                </ul>
+            </div>
             <div class="sidebar-pane" id="settings">
                 <h1 class="sidebar-header">Settings<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
             </div>
