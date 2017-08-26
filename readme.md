@@ -26,5 +26,7 @@ Technologies/Libraries:
 * Leaflet-Sidebar: https://github.com/Turbo87/sidebar-v2 - Sidebar Menu plugin
 * jQuery: https://jquery.com 
 * FontAwesome: http://fontawesome.io
+* Leaflet PolyLine Decorator: https://github.com/bbecquet/Leaflet.PolylineDecorator - For adding arrows to our lines.
+* Leaflet Context Menu: https://github.com/aratcliffe/Leaflet.contextmenu
 
 *Note: Any images/references/parts of Hollow Knight or any other game, are owned soley by their creators.*

@@ -20,6 +20,9 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/rivets/0.9.6/rivets.bundled.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-polylinedecorator/1.1.0/leaflet.polylineDecorator.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-contextmenu/1.4.0/leaflet.contextmenu.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet-contextmenu/1.4.0/leaflet.contextmenu.css" />
+    
     <script>
         /// <reference path="../../../../../node_modules/@types/leaflet/index.d.ts" />
         var layer;
@@ -75,6 +78,8 @@
             var isEditingRoute = false;
             var data;
             var config;
+            var selectedLine;
+
 
             load();
 
@@ -85,10 +90,30 @@
                 maxZoom: mapMaxZoom,
                 minZoom: mapMinZoom,
                 crs: L.CRS.Simple,
-                boxZoom: false
+                boxZoom: false,
+                contextmenu: true,
+
+                
             }).setView([0, 0], mapMaxZoom);
 
-            var mapBounds = new L.LatLngBounds(
+            map.on('contextmenu.show', function (event) {
+                if (event.relatedTarget != undefined)
+                    selectedLine = event.relatedTarget;
+                
+                //console.log(marker);
+            });
+
+
+            var customLine = L.Polyline.extend({
+                    options: { 
+                        routeIndex: undefined,
+                        segment: undefined,
+                        decorator: undefined
+                    }
+            });
+
+
+           var mapBounds = new L.LatLngBounds(
                 map.unproject([0, 3072], mapMaxZoom),
                 map.unproject([4608, 0], mapMaxZoom));
 
@@ -246,23 +271,45 @@
 
             function loadSegment(segment) {
                 $.each(segment.paths, function (i, e) {
-                    var line = new L.polyline(e.points, {
+                    var line = new customLine(e.points, {
                         color: getNextColor(),
                         weight: 3,
                         opacity: 1,
-                        smoothfactor: 1
+                        smoothfactor: 1,
+                        routeIndex: i,
+                        segment: segment
                     }).addTo(pathLayer);
+
+                    line.bindContextMenu({
+                        contextmenu:true,
+                        contextmenuWidth: 140,
+                        contextmenuItems: [{
+                            text: 'Delete Step',
+                            callback: deletePath,
+                            context: line
+                        }]
+                    })
+
                     addArrow(line);
                 });
             }
 
+            function deletePath() {
+                console.log(selectedLine);
+                selectedLine.options.segment.paths.splice(selectedLine.options.routeIndex, 1);
+                selectedLine.options.decorator.remove();
+                pathLayer.removeLayer(selectedLine);
+
+            }
+
             function addArrow(line) {
-                L.polylineDecorator(line, {
+                var decorator = L.polylineDecorator(line, {
                     patterns: [
                         // defines a pattern of 10px-wide dashes, repeated every 20px on the line
                         { offset: '100%', repeat: 0, symbol: L.Symbol.arrowHead({ pixelSize: 8, polygon: false, pathOptions: { stroke: true, color: config.PathColorPriority[currentColorIndex], } }) }
                     ]
                 }).addTo(pathLayer);
+                line.options.decorator = decorator;
             }
 
             function addPathSegment(e) {
