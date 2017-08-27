@@ -1,0 +1,87 @@
+html,
+body,
+#map {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    z-index: 1;
+}
+
+#slider {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 5;
+}
+
+.leaflet-container {
+    background: #000000;
+}
+
+
+#routes ul>li span.header {
+    font: normal normal normal 14px/1 FontAwesome;
+    font-size: inherit;
+    text-rendering: auto;
+    -webkit-font-smoothing: antialiased;
+    background-color: #180d56;
+    color: #FFFFFF;
+    border-radius: 4px;
+    padding: 5px;
+    margin: 5px 0 5px -40px;
+    cursor: pointer;
+    width: 100%;
+    display: inline-block
+}
+
+#routes ul>li span.header i.editactive {
+    color: #FF0000;
+}
+
+#routes ul>li span.header i {
+    float: right;
+    color: #888888
+}
+
+#routes ul {
+    list-style-type: none;
+}
+/*
+#routes {
+    
+}
+*/
+
+.info {
+    padding: 6px 8px;
+    font: 14px/16px Arial, Helvetica, sans-serif;
+    background: white;
+    background: rgba(255, 255, 255, 0.8);
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+    border-radius: 5px;
+}
+
+.info h4 {
+    margin: 0 0 5px;
+    color: #777;
+}
+
+.legend {
+    line-height: 18px;
+    color: #555;
+}
+
+.legend i {
+    width: 18px;
+    height: 18px;
+    float: left;
+    margin-right: 8px;
+    opacity: 0.7;
+}
+
+#addNewRoute {
+    color: #180d56;
+    margin: 5px 5px 0px 5px;
+    cursor: pointer;
+}
