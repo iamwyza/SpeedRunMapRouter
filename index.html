@@ -175,6 +175,25 @@
                 }
             }
 
+            function addRoute(data) {
+                
+                var route = {
+                   name: "New Route",
+                   segments: [
+                       {
+                           name: config.DefaultNewSegmentFormat.replace("{0}", currentSegment + 1),
+                           notes: "",
+                           paths: [
+
+                           ]
+                       }
+                   ]
+                };
+
+                data.routes.push(route);
+
+            }
+
             function addSegment() {
 
                 currentLine = undefined;
@@ -247,6 +266,9 @@
                         map.on('click', addPathSegment);
                         map.on('keypress', onMapKeypress);
                     }
+                },
+                addNewRoute: function(event, rivetData) {
+                    addRoute(rivetData);
                 }
             };
 
@@ -429,6 +451,17 @@
         #routes ul {
             list-style-type: none;
         }
+        /*
+        #routes {
+            
+        }
+*/
+
+        #addNewRoute {
+            color: #180d56;
+            margin: 5px 5px 0px 5px;
+            cursor: pointer;
+        }
     </style>
 </head>
 
@@ -455,7 +488,9 @@
                     Routes and Layers
                     <span class="sidebar-close"><i class="fa fa-caret-left"></i></span>
                 </h1>
+
                 <div id="routes" rv-routes="data">
+                    <i id="addNewRoute" class="fa fa-plus-circle fa-2x" style="color:#180d56" rv-on-click="controller.addNewRoute"></i>
                     <ul>
                         <li rv-each-route="data.routes">
                             <span class="header" rv-on-click="controller.headerClick">{ route.name } <i class="fa fa-pencil" rv-class-editactive="route.isEditingRoute" rv-on-click="controller.edit"></i></span>
