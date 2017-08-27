@@ -101,6 +101,14 @@
                     selectedLine = event.relatedTarget;
             });
 
+            var legend = L.control({ position: 'bottomright' });
+
+            legend.onAdd = function (map) {
+                return L.DomUtil.get('legend');
+            };
+
+            legend.addTo(map);
+
 
             var customLine = L.Polyline.extend({
                 options: {
@@ -149,6 +157,8 @@
                                     notes: ""
                                 }
                             );
+                            currentLine.options.segment = currentRoute.segments[currentSegment];
+                            addContextMenu(currentLine);
                             currentLine = undefined;
                             points = [];
                             break;
@@ -175,22 +185,22 @@
                 }
             }
 
-            function addRoute(data) {
+            function addRoute(model) {
                 
                 var route = {
-                   name: "New Route",
-                   segments: [
-                       {
-                           name: config.DefaultNewSegmentFormat.replace("{0}", currentSegment + 1),
-                           notes: "",
-                           paths: [
+                    name: "New Route",
+                    segments: [
+                        {
+                            name: config.DefaultNewSegmentFormat.replace("{0}", currentSegment + 1),
+                            notes: "",
+                            paths: [
 
-                           ]
-                       }
-                   ]
+                            ]
+                        }
+                    ]
                 };
-
-                data.routes.push(route);
+                
+                model.data.routes.push(route);
 
             }
 
@@ -267,7 +277,7 @@
                         map.on('keypress', onMapKeypress);
                     }
                 },
-                addNewRoute: function(event, rivetData) {
+                addNewRoute: function (event, rivetData) {
                     addRoute(rivetData);
                 }
             };
@@ -316,18 +326,22 @@
                         segment: segment
                     }).addTo(pathLayer);
 
-                    line.bindContextMenu({
-                        contextmenu: true,
-                        contextmenuWidth: 140,
-                        contextmenuItems: [{
-                            text: 'Delete Step',
-                            callback: deletePath,
-                            context: line
-                        }]
-                    })
+                    addContextMenu(line);
 
                     addArrow(line);
                 });
+            }
+
+            function addContextMenu(line) {
+                line.bindContextMenu({
+                    contextmenu: true,
+                    contextmenuWidth: 140,
+                    contextmenuItems: [{
+                        text: 'Delete Step',
+                        callback: deletePath,
+                        context: line
+                    }]
+                })
             }
 
             function deletePath() {
@@ -365,6 +379,12 @@
             }
 
             var view = rivets.bind($('#routes'), { data: data, controller: routeController });
+            var legend = rivets.bind($('#legend'), { config: config, isEditingRoute: true, showLegend: true, fromCharCode: function(e) {
+                if (e == 13) 
+                    return "Enter";
+
+                return String.fromCharCode(e);
+            } });
 
             function getNextColor() {
                 if (currentColorIndex >= config.PathColorPriority.length - 1) {
@@ -457,6 +477,33 @@
         }
 */
 
+        .info {
+            padding: 6px 8px;
+            font: 14px/16px Arial, Helvetica, sans-serif;
+            background: white;
+            background: rgba(255, 255, 255, 0.8);
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+            border-radius: 5px;
+        }
+
+        .info h4 {
+            margin: 0 0 5px;
+            color: #777;
+        }
+
+        .legend {
+            line-height: 18px;
+            color: #555;
+        }
+
+        .legend i {
+            width: 18px;
+            height: 18px;
+            float: left;
+            margin-right: 8px;
+            opacity: 0.7;
+        }
+
         #addNewRoute {
             color: #180d56;
             margin: 5px 5px 0px 5px;
@@ -539,8 +586,26 @@
     <div id="map"></div>
     <!--<input id="slider" type="range" min="0" max="1" step="0.1" value="1" oninput="layer.setOpacity(this.value)">-->
 
-
+    <div id="legend" rv-show="showLegend" class="info legend">
+        <div rv-show="isEditingRoute">
+            Controls<br />
+            <hr />
+            End Current Step: <strong>{ fromCharCode | call config.Controls.SavePathPart }</strong><br />
+            Undo Last Line: <strong>{ fromCharCode | call config.Controls.RemoveLastPathPart }</strong><br />
+            Cancel Step: <strong>{ fromCharCode | call config.Controls.CancelPath }</strong><br />
+            New Segment: <strong>{ fromCharCode | call config.Controls.NewSegment }</strong><br />
+            Toggle Map Dragging: <strong>{ fromCharCode | call config.Controls.DraggingToggle }</strong><br />
+        </div>
+    </div>
 
 </body>
+<!--
+                Controls: { //Currently using "keypress" vs "keydown" due to lack of "keydown" support in leaflet
+                    CancelPath: 120, //x
+                    RemoveLastPathPart: 99, //c
+                    SavePathPart: 13, //enter
+                    NewSegment: 115, //s
+                    DraggingToggle: 100 //d
+-->
 
 </html>
